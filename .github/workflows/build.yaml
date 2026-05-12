@@ -1,4 +1,4 @@
-name: Build AI Translator Apps
+name: Build AI Translator
 
 on:
   workflow_dispatch:
