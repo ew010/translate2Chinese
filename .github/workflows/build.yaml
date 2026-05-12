@@ -30,7 +30,7 @@ jobs:
         # 自动获取库路径，并使用分号打包进 exe
         $LLAMA_PATH = $(python -c "import llama_cpp, os; print(os.path.dirname(llama_cpp.__file__))")
         # 注意：这里的 main.py 请替换成你实际推送到 GitHub 上的 Python 文件名（比如 v6_flet.py）
-        pyinstaller --clean --noconfirm --onedir --windowed --name "AITranslator" --add-data "$LLAMA_PATH;llama_cpp" main.py
+        pyinstaller --clean --noconfirm --onedir --windowed --name "AITranslator" --add-data "$LLAMA_PATH;llama_cpp" v3_gui.py
         
         # 压缩成 ZIP 供下载
         Compress-Archive -Path dist\AITranslator -DestinationPath AITranslator_Windows.zip
