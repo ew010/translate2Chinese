@@ -1,17 +1,11 @@
-name: Build AI Translator
+name: Build Windows App (Old CPU Compatible)
 
 on:
-  push:
-    branches: [ "main", "master" ]
   workflow_dispatch:
 
 jobs:
-  build:
-    strategy:
-      matrix:
-        os: [macos-latest, windows-latest]
-
-    runs-on: ${{ matrix.os }}
+  build-windows:
+    runs-on: windows-latest
 
     steps:
     - name: Checkout Code
@@ -22,36 +16,26 @@ jobs:
       with:
         python-version: '3.11'
 
-    - name: Install Dependencies
+    - name: Compile llama-cpp-python without AVX2
       run: |
         python -m pip install --upgrade pip
-        pip install pyinstaller llama-cpp-python
+        # 【核心魔法】：强制云端服务器在编译 C++ 时关闭 AVX2 加速
+        $env:CMAKE_ARGS="-DLLAMA_AVX=OFF -DLLAMA_AVX2=OFF -DLLAMA_FMA=OFF"
+        pip install llama-cpp-python --no-cache-dir --force-reinstall
+        pip install flet pyinstaller
 
-    - name: Build Mac App
-      if: matrix.os == 'macos-latest'
+    - name: Build Windows Executable
       run: |
-        LLAMA_PATH=$(python -c "import llama_cpp, os; print(os.path.dirname(llama_cpp.__file__))")
-        pyinstaller --clean --noconfirm --onedir --windowed --name "AITranslator" --add-data "$LLAMA_PATH:llama_cpp" --add-data "$LLAMA_PATH/lib/*metal*:." v3_gui.py
-        cd dist
-        zip -r ../AITranslator_macOS.zip AITranslator.app
-
-    - name: Build Windows App
-      if: matrix.os == 'windows-latest'
-      run: |
-        $LLAMA_PATH = python -c "import llama_cpp, os; print(os.path.dirname(llama_cpp.__file__))"
-        pyinstaller --clean --noconfirm --onedir --windowed --name "AITranslator" --add-data "$LLAMA_PATH;llama_cpp" v3_gui.py
+        # 自动获取库路径，并使用分号打包进 exe
+        $LLAMA_PATH = $(python -c "import llama_cpp, os; print(os.path.dirname(llama_cpp.__file__))")
+        # 注意：这里的 main.py 请替换成你实际推送到 GitHub 上的 Python 文件名（比如 v6_flet.py）
+        pyinstaller --clean --noconfirm --onedir --windowed --name "AITranslator" --add-data "$LLAMA_PATH;llama_cpp" main.py
+        
+        # 压缩成 ZIP 供下载
         Compress-Archive -Path dist\AITranslator -DestinationPath AITranslator_Windows.zip
 
-    - name: Upload Mac Artifact
-      if: matrix.os == 'macos-latest'
+    - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: AITranslator-macOS
-        path: AITranslator_macOS.zip
-
-    - name: Upload Windows Artifact
-      if: matrix.os == 'windows-latest'
-      uses: actions/upload-artifact@v4
-      with:
-        name: AITranslator-Windows
+        name: AITranslator-Windows-NoAVX2
         path: AITranslator_Windows.zip
