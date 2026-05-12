@@ -1,8 +1,9 @@
-name: Build Windows App (Old CPU Compatible)
+name: Build AI Translator Apps
 
 on:
+  push:
+    branches: [ "main", "master" ]
   workflow_dispatch:
-
 jobs:
   build-windows:
     runs-on: windows-latest
