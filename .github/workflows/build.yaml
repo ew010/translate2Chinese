@@ -4,7 +4,11 @@ on:
   push:
     branches: [ "main", "master" ]
   workflow_dispatch:
+
 jobs:
+  # ==============================
+  # Windows 打包任务
+  # ==============================
   build-windows:
     runs-on: windows-latest
 
@@ -29,7 +33,7 @@ jobs:
       run: |
         # 自动获取库路径，并使用分号打包进 exe
         $LLAMA_PATH = $(python -c "import llama_cpp, os; print(os.path.dirname(llama_cpp.__file__))")
-        # 注意：这里的 main.py 请替换成你实际推送到 GitHub 上的 Python 文件名（比如 v6_flet.py）
+        # 注意：这里的 main.py 请替换成你实际推送到 GitHub 上的 Python 文件名
         pyinstaller --clean --noconfirm --onedir --windowed --name "AITranslator" --add-data "$LLAMA_PATH;llama_cpp" v3_gui.py
         
         # 压缩成 ZIP 供下载
@@ -40,3 +44,45 @@ jobs:
       with:
         name: AITranslator-Windows-NoAVX2
         path: AITranslator_Windows.zip
+
+  # ==============================
+  # macOS 打包任务
+  # ==============================
+  build-mac:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Compile llama-cpp-python with Metal
+      run: |
+        python -m pip install --upgrade pip
+        # 【Mac 专属优化】：开启 Apple Metal (GPU) 加速
+        export CMAKE_ARGS="-DLLAMA_METAL=on"
+        pip install llama-cpp-python --no-cache-dir --force-reinstall
+        pip install flet pyinstaller
+
+    - name: Build Mac Executable
+      run: |
+        # 获取库路径
+        LLAMA_PATH=$(python -c "import llama_cpp, os; print(os.path.dirname(llama_cpp.__file__))")
+        # 【注意】Mac 环境下 --add-data 使用冒号 (:) 分隔！
+        pyinstaller --clean --noconfirm --onedir --windowed --name "AITranslator" --add-data "$LLAMA_PATH:llama_cpp" v3_gui.py
+        
+        # Mac 的 --windowed 模式会在 dist 目录下生成 AITranslator.app
+        # 进入 dist 目录将其打包成 ZIP
+        cd dist
+        zip -r ../AITranslator_Mac.zip AITranslator.app
+        cd ..
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: AITranslator-Mac-Metal
+        path: AITranslator_Mac.zip
