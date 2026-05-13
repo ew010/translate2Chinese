@@ -105,13 +105,17 @@ class TranslatorApp:
 
     def translate_text(self, text):
         prompt = f"Translate the following text into {self.lang_to}, maintain formatting, only output translated content:\n\n{text}"
-        response = self.llm(
-            f"<|user|>\n{prompt} <|assistant|>\n",
+        
+        # 使用 create_chat_completion 替代直接调用 self.llm
+        response = self.llm.create_chat_completion(
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
             max_tokens=1024,
-            stop=["<|endoftext|>", "<|user|>"],
-            echo=False
+            # 这里不用再手动写 stop 了，llama.cpp 会自动处理该模型的停止符
         )
-        return response['choices'][0]['text'].strip()
+        # 提取返回值的方式也有所变化
+        return response['choices'][0]['message']['content'].strip()
 
     def run_translation(self):
         try:
